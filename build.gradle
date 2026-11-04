@@ -3,3 +3,18 @@
 plugins {
     id 'com.gtnewhorizons.gtnhconvention'
 }
+
+version = '2.2.2'
+tasks.named('injectTags') {
+    tags.put('VERSION', project.version.toString())
+}
+
+def branchName = versionDetails().branchName
+def archiveNameVersion = version.toString()
+if (branchName) {
+    def archiveBranch = branchName.replaceAll(/[^a-zA-Z0-9.-]/, '-')
+    archiveNameVersion = archiveNameVersion.replaceFirst(/-${java.util.regex.Pattern.quote(archiveBranch)}\+.*/, '')
+}
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set(archiveNameVersion)
+}

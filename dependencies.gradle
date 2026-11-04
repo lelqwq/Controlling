@@ -1,3 +1,4 @@
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:Angelica:2.1.56:dev")
 }

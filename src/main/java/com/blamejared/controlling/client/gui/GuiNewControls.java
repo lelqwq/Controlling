@@ -21,6 +21,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 import com.blamejared.controlling.Controlling;
+import com.blamejared.controlling.keybinding.BindingContextRegistry;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
@@ -60,6 +61,7 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonKey;
     private GuiCheckBox buttonCat;
     private boolean confirmingReset = false;
+    private String contextSaveError;
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
     private boolean showVisualKeyboard = false;
     private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
@@ -143,6 +145,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonConflicting);
 
         this.searchTextBox = new GuiTextField(fontRendererObj, this.width / 2 - 154, this.height - 29 - 23, 148, 18);
+        this.searchTextBox.setText(this.lastSearch);
         searchTextBox.setCanLoseFocus(true);
 
         this.buttonKey = new GuiCheckBox(
@@ -178,6 +181,7 @@ public class GuiNewControls extends GuiControls {
                         150 / 2,
                         20,
                         StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName()));
+        this.filterKeys();
     }
 
     @Override
@@ -224,7 +228,7 @@ public class GuiNewControls extends GuiControls {
         this.drawDefaultBackground();
         this.guiNewKeyBindingList.drawScreen(mouseX, mouseY, partialTicks);
         this.drawCenteredString(this.fontRendererObj, this.guiScreenTitle, this.width / 2, 8, 0xFFFFFF);
-        boolean isModified = false;
+        boolean isModified = BindingContextRegistry.hasUserOverrides();
 
         for (KeyBinding keybinding : this.options.keyBindings) {
             if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
@@ -265,6 +269,8 @@ public class GuiNewControls extends GuiControls {
         } else {
             this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
         }
+        if (contextSaveError != null)
+            drawCenteredString(fontRendererObj, contextSaveError, width / 2, height - 85, 0xff5555);
     }
 
     @Override
@@ -277,12 +283,18 @@ public class GuiNewControls extends GuiControls {
         } else if (button.id == RESET_ALL_KEYS_BUTTON_ID) {
             if (!confirmingReset) {
                 confirmingReset = true;
-                button.displayString = StatCollector.translateToLocal("options.confirmReset");
+                button.displayString = StatCollector.translateToLocal("controlling.context.confirmReset");
                 return;
             }
 
             confirmingReset = false;
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
+
+            if (!BindingContextRegistry.clearUserContexts()) {
+                showContextSaveError();
+                return;
+            }
+            contextSaveError = null;
 
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
                 if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
@@ -293,6 +305,7 @@ public class GuiNewControls extends GuiControls {
             }
             this.options.saveOptions();
             KeyBinding.resetKeyBindingArrayAndHash();
+            filterKeys();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
             if (displayMode == DisplayMode.UNBOUND) {
                 buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
@@ -482,6 +495,15 @@ public class GuiNewControls extends GuiControls {
         this.visualKeyboardModifier = showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding
                 ? comboKeyBinding.controlling$getKeyModifier()
                 : KeyModifier.NONE;
+    }
+
+    void showContextSaveError() {
+        contextSaveError = StatCollector.translateToLocal("controlling.context.saveError");
+    }
+
+    void refreshKeys() {
+        contextSaveError = null;
+        filterKeys();
     }
 
     void selectVisualKeyboardKey(int keyCode) {

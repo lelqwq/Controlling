@@ -42,7 +42,8 @@ public final class KeyConflictResolver {
      * @return true when both bindings share a key and their contexts intersect.
      */
     public static boolean conflicts(KeyBinding first, KeyBinding second) {
-        return sharesKey(first, second) && BindingContextRegistry.intersects(first, second);
+        return sharesKey(first, second) && BindingContextRegistry.intersects(first, second)
+                && !IgnoredKeyConflicts.isIgnored(first, second);
     }
 
     public static boolean hasConflict(KeyBinding keyBinding, KeyBinding[] allBindings) {

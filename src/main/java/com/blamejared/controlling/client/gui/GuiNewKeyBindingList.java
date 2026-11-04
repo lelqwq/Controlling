@@ -18,6 +18,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import com.blamejared.controlling.keybinding.BindingContextRegistry;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.IgnoredKeyConflicts;
 import com.blamejared.controlling.keybinding.KeyConflictResolver;
 
 import cpw.mods.fml.relauncher.Side;
@@ -204,13 +205,17 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
         private final GuiButton btnChangeKeyBinding;
         private final GuiButton btnVisualKeyboard;
+        private final GuiButton btnContexts;
+        private final GuiButton btnResolveConflicts;
         private final GuiButton btnResetKeyBinding;
 
         private KeyEntry(final KeyBinding keyBinding, CategoryEntry categoryEntry) {
             this.keybinding = keyBinding;
             this.keyDesc = I18n.format(keyBinding.getKeyDescription());
-            this.btnChangeKeyBinding = new GuiButton(2000, 0, 0, 75 + 20, 20, this.keyDesc);
+            this.btnChangeKeyBinding = new GuiButton(2000, 0, 0, 55, 20, this.keyDesc);
             this.btnVisualKeyboard = new GuiButton(2002, 0, 0, 18, 20, "");
+            this.btnContexts = new GuiButton(2003, 0, 0, 18, 20, "C");
+            this.btnResolveConflicts = new GuiButton(2004, 0, 0, 18, 20, "!");
             this.categoryEntry = categoryEntry;
             this.btnResetKeyBinding = new GuiButton(2001, 0, 0, 50, 20, I18n.format("controls.reset"));
         }
@@ -223,16 +228,38 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             this.btnChangeKeyBinding.yPosition = y;
             this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2, mouseX, mouseY);
 
-            this.btnVisualKeyboard.xPosition = x + 204;
+            this.btnVisualKeyboard.xPosition = x + 164;
             this.btnVisualKeyboard.yPosition = y;
             this.btnVisualKeyboard.drawButton(mc, mouseX, mouseY);
             this.drawKeyboardIcon();
 
+            this.btnContexts.xPosition = x + 184;
+            this.btnContexts.yPosition = y;
+            this.btnContexts.drawButton(mc, mouseX, mouseY);
+            if (mouseX >= this.btnContexts.xPosition && mouseX < this.btnContexts.xPosition + 18
+                    && mouseY >= y
+                    && mouseY < y + 20) {
+                GuiNewKeyBindingList.this.hoveredKeyTooltip = java.util.Arrays.asList(
+                        I18n.format("controlling.context.edit"),
+                        BindingContextRegistry.describeContexts(keybinding));
+            }
+
+            this.btnResolveConflicts.xPosition = x + 204;
+            this.btnResolveConflicts.yPosition = y;
+            this.btnResolveConflicts.drawButton(mc, mouseX, mouseY);
+            if (mouseX >= this.btnResolveConflicts.xPosition && mouseX < this.btnResolveConflicts.xPosition + 18
+                    && mouseY >= y
+                    && mouseY < y + 20) {
+                GuiNewKeyBindingList.this.hoveredKeyTooltip = java.util.Collections
+                        .singletonList(I18n.format("controlling.conflicts.edit"));
+            }
+
             this.btnResetKeyBinding.xPosition = x + 224;
             this.btnResetKeyBinding.yPosition = y;
-            this.btnResetKeyBinding.enabled = keybinding instanceof ComboKeyBinding comboKeyBinding
-                    ? !comboKeyBinding.controlling$isSetToDefaultValue()
-                    : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
+            this.btnResetKeyBinding.enabled = BindingContextRegistry.hasUserOverride(keybinding)
+                    || (keybinding instanceof ComboKeyBinding comboKeyBinding
+                            ? !comboKeyBinding.controlling$isSetToDefaultValue()
+                            : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault());
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
             this.btnChangeKeyBinding.displayString = keybinding instanceof ComboKeyBinding comboKeyBinding
@@ -285,7 +312,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         private List<String> buildSharedKeyTooltip(List<KeyBinding> sharing) {
-            final boolean conflicting = KeyConflictResolver.hasConflict(sharing);
+            final boolean conflicting = KeyConflictResolver
+                    .hasConflict(this.keybinding, sharing.toArray(new KeyBinding[0]));
             final List<String> lines = new ArrayList<>();
             lines.add(
                     (conflicting ? EnumChatFormatting.RED : EnumChatFormatting.YELLOW) + I18n.format(
@@ -294,7 +322,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 lines.add(
                         EnumChatFormatting.GRAY + I18n.format(keyBinding.getKeyDescription())
                                 + " - "
-                                + BindingContextRegistry.describeContexts(keyBinding));
+                                + BindingContextRegistry.describeContexts(keyBinding)
+                                + (IgnoredKeyConflicts.isIgnored(this.keybinding, keyBinding)
+                                        ? " (" + I18n.format("controlling.conflicts.resolved") + ")"
+                                        : ""));
             }
             return lines;
         }
@@ -374,7 +405,17 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             } else if (this.btnVisualKeyboard.mousePressed(mc, mouseX, mouseY)) {
                 controlsScreen.selectKeyBinding(this.keybinding, true);
                 return true;
+            } else if (this.btnContexts.mousePressed(mc, mouseX, mouseY)) {
+                mc.displayGuiScreen(new GuiEditContexts(controlsScreen, this.keybinding));
+                return true;
+            } else if (this.btnResolveConflicts.mousePressed(mc, mouseX, mouseY)) {
+                mc.displayGuiScreen(new GuiResolveConflicts(controlsScreen, this.keybinding));
+                return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
+                if (!BindingContextRegistry.saveUserContexts(this.keybinding, null)) {
+                    controlsScreen.showContextSaveError();
+                    return true;
+                }
                 if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
                     comboKeyBinding.controlling$setToDefault();
                 } else {
@@ -382,6 +423,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 }
                 mc.gameSettings.setOptionKeyBinding(this.keybinding, this.keybinding.getKeyCodeDefault());
                 KeyBinding.resetKeyBindingArrayAndHash();
+                controlsScreen.refreshKeys();
                 return true;
             }
 
@@ -392,6 +434,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         public void mouseReleased(int slotIndex, int x, int y, int mouseEvent, int relativeX, int relativeY) {
             this.btnChangeKeyBinding.mouseReleased(x, y);
             this.btnVisualKeyboard.mouseReleased(x, y);
+            this.btnContexts.mouseReleased(x, y);
+            this.btnResolveConflicts.mouseReleased(x, y);
             this.btnResetKeyBinding.mouseReleased(x, y);
         }
 

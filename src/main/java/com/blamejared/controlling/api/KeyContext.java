@@ -70,9 +70,24 @@ public final class KeyContext {
         return new KeyContext(Type.SCREEN, trimmed, null);
     }
 
-    /**
-     * @return true when both contexts can be active at the same time.
-     */
+    /** Creates a named context used only when reporting conflicts. */
+    public static KeyContext custom(String name) {
+        Objects.requireNonNull(name, "name");
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) throw new IllegalArgumentException("Context name must not be empty");
+        return new KeyContext(Type.CUSTOM, trimmed, null);
+    }
+
+    /** @return the configured screen class name, or null for a general context. */
+    public String getScreenClassName() {
+        return this.type == Type.SCREEN ? this.screenClassName : null;
+    }
+
+    public String getCustomName() {
+        return this.type == Type.CUSTOM ? this.screenClassName : null;
+    }
+
+    /** @return true when both contexts can be active at the same time. */
     public boolean intersects(KeyContext other) {
         if (other == null) {
             return false;
@@ -90,6 +105,8 @@ public final class KeyContext {
                     return true;
                 }
                 return other.type == Type.SCREEN && this.screensIntersect(other);
+            case CUSTOM:
+                return other.type == Type.CUSTOM && this.screenClassName.equals(other.screenClassName);
             default:
                 return false;
         }
@@ -148,6 +165,8 @@ public final class KeyContext {
                 return I18n.format("controlling.context.gui");
             case SCREEN:
                 return I18n.format("controlling.context.screen", this.getScreenSimpleName());
+            case CUSTOM:
+                return this.screenClassName;
             default:
                 throw new IllegalStateException("Unknown key context type: " + this.type);
         }
@@ -179,13 +198,16 @@ public final class KeyContext {
 
     @Override
     public String toString() {
-        return this.type == Type.SCREEN ? "SCREEN(" + this.screenClassName + ")" : this.type.name();
+        return this.type == Type.SCREEN || this.type == Type.CUSTOM
+                ? this.type.name() + "(" + this.screenClassName + ")"
+                : this.type.name();
     }
 
     private enum Type {
         ANY,
         WORLD,
         GUI,
-        SCREEN
+        SCREEN,
+        CUSTOM
     }
 }

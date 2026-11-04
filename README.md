@@ -16,6 +16,11 @@ Controlling 是一款适用于 Minecraft 1.7.10 的客户端体验优化模组�
 - 可在 QWERTY 与 AZERTY 预设之间切换默认移动键。
 - 支持使用修饰键（`Ctrl`、`Shift`、`Alt`）的组合按键绑定。
 - 可通过带主键盘、小键盘和辅助键页的可视化键盘界面绑定按键。
+- 在按键列表中点击 `C` 可从已知场景中选择一个或多个场景。列表包含内置、用户配置和模组 API 声明的界面，并附有说明；场景用于冲突判断，不会限制按键实际触发。
+- 可在场景编辑器中输入任意名称添加自定义场景；保存后可供其他按键复用。同名自定义场景相互冲突，不同名称的自定义场景及其与游戏内或界面场景互不冲突；任意场景与所有场景冲突。
+- 自定义场景可在列表中删除，保存后会从所有按键中移除；不再有场景的按键恢复自动场景。预设场景不能删除。
+- 点击按键旁的 `!`，可将它与指定按键之间的冲突标记为已解决或重新启用提示；此设置只影响冲突显示。
+- 场景编辑器可恢复自动场景；重置单个或全部按键时也会重置相应的手动场景。
 
 与 ModernKeybinding（`mkb`）不兼容，因为组合键支持现已内置。
 
@@ -87,6 +92,11 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Toggle default movement keys between QWERTY and AZERTY presets.
 - Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`).
 - Bind keys from a visual keyboard overlay with main, numpad, and auxiliary key pages.
+- Click `C` next to a binding to choose one or more known contexts. The list describes contexts from the built-in table, user configuration, and mod API declarations. Contexts affect conflict reporting, not whether a key actually fires.
+- Add custom contexts by name in the editor; saved contexts can be reused for other bindings. Matching custom names conflict; different names and world or GUI contexts do not. Anywhere conflicts with every context.
+- Delete custom contexts from the list to remove them from all bindings when saved. Bindings left without a context revert to their automatic context. Preset contexts cannot be deleted.
+- Click `!` next to a binding to mark its conflict with a specific other binding resolved or restore the warning. This only affects conflict reporting.
+- Restore automatic contexts in the editor; resetting one or all bindings also resets the corresponding manual contexts.
 
 Incompatible with ModernKeybinding (`mkb`) because combo support is now built in.
 
