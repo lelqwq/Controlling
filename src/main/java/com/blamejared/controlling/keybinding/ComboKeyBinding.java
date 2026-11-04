@@ -18,8 +18,6 @@ public interface ComboKeyBinding {
 
     boolean controlling$conflicts(KeyBinding other);
 
-    boolean controlling$hasKeyCodeModifierConflict(KeyBinding other);
-
     boolean controlling$isSetToDefaultValue();
 
     void controlling$setToDefault();

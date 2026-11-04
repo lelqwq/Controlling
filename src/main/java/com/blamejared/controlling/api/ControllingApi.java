@@ -1,9 +1,16 @@
 package com.blamejared.controlling.api;
 
+import java.util.Collections;
+import java.util.List;
+
 import net.minecraft.client.settings.KeyBinding;
 
+import com.blamejared.controlling.keybinding.BindingContextRegistry;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
+
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.relauncher.Side;
 
 /**
  * Public API surface for interacting with Controlling combo keybindings.
@@ -71,5 +78,29 @@ public final class ControllingApi {
             comboKeyBinding.controlling$setKeyModifier(keyModifier);
         }
         return true;
+    }
+
+    /**
+     * Declares the scenarios in which the keybinding is used. Bindings that share a key and modifier only conflict when
+     * at least one of their contexts intersects.
+     * <p>
+     * The declaration replaces any previous API declaration for the binding. Passing no contexts removes the
+     * declaration. This method is client-side only and is a no-op on a dedicated server.
+     */
+    public static void setBindingContexts(KeyBinding keyBinding, KeyContext... contexts) {
+        if (FMLCommonHandler.instance().getSide() != Side.CLIENT) {
+            return;
+        }
+        BindingContextRegistry.setApiContexts(keyBinding, contexts);
+    }
+
+    /**
+     * @return the effective contexts of the keybinding, or an empty list when the binding is null.
+     */
+    public static List<KeyContext> getBindingContexts(KeyBinding keyBinding) {
+        if (keyBinding == null) {
+            return Collections.emptyList();
+        }
+        return BindingContextRegistry.getContexts(keyBinding);
     }
 }

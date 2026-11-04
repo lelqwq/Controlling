@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyConflictResolver;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
 @Mixin(KeyBinding.class)
@@ -124,27 +125,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public boolean controlling$conflicts(KeyBinding other) {
-        if (other == null) {
-            return false;
-        }
-        if (this.keyCode != other.getKeyCode() || this.keyCode == Keyboard.KEY_NONE) {
-            return false;
-        }
-
-        final KeyModifier otherModifier = other instanceof ComboKeyBinding combo ? combo.controlling$getKeyModifier()
-                : KeyModifier.NONE;
-        return this.controlling$keyModifier == otherModifier;
-    }
-
-    @Override
-    public boolean controlling$hasKeyCodeModifierConflict(KeyBinding other) {
-        if (!(other instanceof ComboKeyBinding combo)) {
-            return false;
-        }
-        if (!this.controlling$conflicts(other)) {
-            return false;
-        }
-        return this.controlling$keyModifier != combo.controlling$getKeyModifier();
+        return KeyConflictResolver.conflicts((KeyBinding) (Object) this, other);
     }
 
     @Override

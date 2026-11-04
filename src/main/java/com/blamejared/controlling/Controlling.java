@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.blamejared.controlling.events.ClientEventHandler;
+import com.blamejared.controlling.keybinding.BindingContextRegistry;
 
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
@@ -26,6 +27,7 @@ public class Controlling {
                     "Controlling now ships built-in key combo support and is incompatible with ModernKeybinding (mkb).");
         }
 
+        BindingContextRegistry.init();
         MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
     }
 }

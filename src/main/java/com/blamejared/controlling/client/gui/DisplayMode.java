@@ -3,9 +3,8 @@ package com.blamejared.controlling.client.gui;
 import java.util.function.Predicate;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.KeyBinding;
 
-import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyConflictResolver;
 
 public enum DisplayMode {
 
@@ -18,21 +17,8 @@ public enum DisplayMode {
             case ALL:
                 return keyEntry -> true;
             case CONFLICTING:
-                return keyEntry -> {
-                    for (KeyBinding keyBinding : Minecraft.getMinecraft().gameSettings.keyBindings) {
-                        if (keyBinding != keyEntry.getKeybinding() && keyBinding.getKeyCode() != 0) {
-                            if (keyBinding instanceof ComboKeyBinding comboKeyBinding
-                                    && keyEntry.getKeybinding() instanceof ComboKeyBinding) {
-                                if (comboKeyBinding.controlling$conflicts(keyEntry.getKeybinding())) {
-                                    return true;
-                                }
-                            } else if (keyBinding.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
+                return keyEntry -> KeyConflictResolver
+                        .hasConflict(keyEntry.getKeybinding(), Minecraft.getMinecraft().gameSettings.keyBindings);
             case UNBOUND:
                 return keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0;
         }

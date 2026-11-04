@@ -16,7 +16,9 @@ import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.blamejared.controlling.keybinding.BindingContextRegistry;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyConflictResolver;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -33,6 +35,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private final List<IGuiListEntry> allEntries = new ArrayList<>();
     private int maxListLabelWidth;
     private String hoveredKeyDescription;
+    private List<String> hoveredKeyTooltip;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -74,11 +77,14 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.hoveredKeyDescription = null;
+        this.hoveredKeyTooltip = null;
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
     public void drawHoveredKeyDescriptionTooltip(int mouseX, int mouseY) {
-        if (this.hoveredKeyDescription != null) {
+        if (this.hoveredKeyTooltip != null) {
+            this.controlsScreen.drawTooltipLines(this.hoveredKeyTooltip, mouseX, mouseY);
+        } else if (this.hoveredKeyDescription != null) {
             this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredKeyDescription, mouseX, mouseY);
         }
     }
@@ -233,25 +239,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     ? comboKeyBinding.controlling$getDisplayName()
                     : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
-            boolean hasConflict = false;
-            boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
-
-            if (this.keybinding.getKeyCode() != 0) {
-                for (KeyBinding key : mc.gameSettings.keyBindings) {
-                    if (key != this.keybinding) {
-                        if (key instanceof ComboKeyBinding comboKeyBinding
-                                && keybinding instanceof ComboKeyBinding comboKeyBinding2) {
-                            if (comboKeyBinding.controlling$conflicts(keybinding)) {
-                                hasConflict = true;
-                                modConflict &= comboKeyBinding2.controlling$hasKeyCodeModifierConflict(key);
-                            }
-                        } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
-                            hasConflict = true;
-                            break;
-                        }
-                    }
-                }
-            }
+            final boolean hasConflict = KeyConflictResolver.hasConflict(this.keybinding, mc.gameSettings.keyBindings);
 
             final String displayText = this.btnChangeKeyBinding.displayString;
             final String searchString = controlsScreen.getSearchString();
@@ -273,9 +261,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 prefix = EnumChatFormatting.YELLOW + "> " + EnumChatFormatting.RESET + EnumChatFormatting.UNDERLINE;
                 suffix = EnumChatFormatting.RESET.toString() + EnumChatFormatting.YELLOW + " <";
             } else if (hasConflict) {
-                EnumChatFormatting clr = modConflict ? EnumChatFormatting.GOLD : EnumChatFormatting.RED;
-                prefix = clr + "[ " + EnumChatFormatting.RESET;
-                suffix = clr + " ]";
+                prefix = EnumChatFormatting.RED + "[ " + EnumChatFormatting.RESET;
+                suffix = EnumChatFormatting.RED + " ]";
             }
             this.btnChangeKeyBinding.displayString = prefix + this.btnChangeKeyBinding.displayString + suffix;
 
@@ -285,6 +272,31 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
             }
 
+            if (mouseX >= this.btnChangeKeyBinding.xPosition
+                    && mouseX < this.btnChangeKeyBinding.xPosition + this.btnChangeKeyBinding.width
+                    && mouseY >= this.btnChangeKeyBinding.yPosition
+                    && mouseY < this.btnChangeKeyBinding.yPosition + this.btnChangeKeyBinding.height) {
+                final List<KeyBinding> sharing = KeyConflictResolver
+                        .sharingBindings(this.keybinding, mc.gameSettings.keyBindings);
+                if (sharing.size() > 1) {
+                    GuiNewKeyBindingList.this.hoveredKeyTooltip = this.buildSharedKeyTooltip(sharing);
+                }
+            }
+        }
+
+        private List<String> buildSharedKeyTooltip(List<KeyBinding> sharing) {
+            final boolean conflicting = KeyConflictResolver.hasConflict(sharing);
+            final List<String> lines = new ArrayList<>();
+            lines.add(
+                    (conflicting ? EnumChatFormatting.RED : EnumChatFormatting.YELLOW) + I18n.format(
+                            conflicting ? "controlling.tooltip.conflictingKey" : "controlling.tooltip.sharedKey"));
+            for (KeyBinding keyBinding : sharing) {
+                lines.add(
+                        EnumChatFormatting.GRAY + I18n.format(keyBinding.getKeyDescription())
+                                + " - "
+                                + BindingContextRegistry.describeContexts(keyBinding));
+            }
+            return lines;
         }
 
         private void drawKeyboardIcon() {

@@ -15,7 +15,9 @@ import net.minecraft.client.settings.KeyBinding;
 
 import org.lwjgl.input.Keyboard;
 
+import com.blamejared.controlling.keybinding.BindingContextRegistry;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyConflictResolver;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
 import cpw.mods.fml.common.Loader;
@@ -532,15 +534,15 @@ public class GuiVisualKeyboard {
             KeyModifier modifier = screen.getVisualKeyboardModifier();
             this.enabled = !modifier.matches(this.keyCode);
 
-            int bindings = this.getMatchingBindings(mc, modifier).size();
+            final List<KeyBinding> matchingBindings = this.getMatchingKeyBindings(mc, modifier);
             int color = KEY_NORMAL_COLOR;
             if (!this.enabled) {
                 color = KEY_DISABLED_COLOR;
             } else if (this.isSelected(screen, modifier)) {
                 color = KEY_SELECTED_COLOR;
-            } else if (bindings > 1) {
+            } else if (KeyConflictResolver.hasConflict(matchingBindings)) {
                 color = KEY_CONFLICT_COLOR;
-            } else if (bindings == 1) {
+            } else if (!matchingBindings.isEmpty()) {
                 color = KEY_BOUND_COLOR;
             } else if (this.contains(mouseX, mouseY)) {
                 color = KEY_HOVER_COLOR;
@@ -572,7 +574,9 @@ public class GuiVisualKeyboard {
         private List<String> getMatchingBindings(Minecraft mc, KeyModifier modifier) {
             List<String> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, modifier)) {
-                bindings.add(I18n.format(keyBinding.getKeyDescription()));
+                bindings.add(
+                        I18n.format(keyBinding.getKeyDescription()) + " - "
+                                + BindingContextRegistry.describeContexts(keyBinding));
             }
             return bindings;
         }

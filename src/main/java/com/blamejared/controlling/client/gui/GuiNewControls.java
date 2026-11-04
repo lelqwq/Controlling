@@ -598,6 +598,10 @@ public class GuiNewControls extends GuiControls {
     }
 
     void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
+        this.drawTooltipLines(lines, mouseX, mouseY);
+    }
+
+    void drawTooltipLines(List<String> lines, int mouseX, int mouseY) {
         this.func_146283_a(lines, mouseX, mouseY);
     }
 
